@@ -1,7 +1,6 @@
 import asyncio
 import os
 import csv
-import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 
@@ -11,8 +10,11 @@ from pyppeteer import launch
 async def searchGoogleMaps():
     try:
         # Define search query
-        query = "SPBU Jakarta"
-        
+        query = "Bank, Jakarta"
+
+        # Define file path
+        file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Bank_Jakarta.csv')
+
         # Launch browser
         browser = await launch(headless=False, executablePath="C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe")
 
@@ -33,7 +35,7 @@ async def searchGoogleMaps():
 
         # Parse HTML content with BeautifulSoup
         soup = BeautifulSoup(html, 'html.parser')
-        
+
         # Find relevant elements
         businesses = []
         for link in soup.find_all('a'):
@@ -75,7 +77,16 @@ async def searchGoogleMaps():
                     'numberOfReviews': numberOfReviews
                 })
 
-        return businesses
+        # Write data to CSV file
+        with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
+            fieldnames = businesses[0].keys() if businesses else []
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+            writer.writeheader()
+            for business in businesses:
+                writer.writerow(business)
+
+        print("Data has been saved to", file_path)
 
     except Exception as e:
         print("Error at searchGoogleMaps:", e)
@@ -114,7 +125,6 @@ async def autoScroll(page):
     }''')
 
 async def main():
-    businesses = await searchGoogleMaps()
-    print(businesses)
+    await searchGoogleMaps()
 
 asyncio.get_event_loop().run_until_complete(main())
