@@ -1,19 +1,17 @@
 import asyncio
 import os
 import csv
+import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 
 # Import browser from pyppeteer
 from pyppeteer import launch
 
-async def searchGoogleMaps(max_data):
+async def searchGoogleMaps():
     try:
         # Define search query
-        query = "Developer Property, Bandung"
-
-        # Define file path
-        file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'DeveloperProperty_BDG.csv')
+        query = "SPBU Jakarta"
         
         # Launch browser
         browser = await launch(headless=False, executablePath="C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe")
@@ -31,10 +29,11 @@ async def searchGoogleMaps(max_data):
 
         # Get HTML content
         html = await page.content()
+        await browser.close()
 
         # Parse HTML content with BeautifulSoup
         soup = BeautifulSoup(html, 'html.parser')
-
+        
         # Find relevant elements
         businesses = []
         for link in soup.find_all('a'):
@@ -64,27 +63,19 @@ async def searchGoogleMaps(max_data):
                     numberOfReviews = None
 
                 businesses.append({
-                    'Nama': storeName,
-                    'Kategori': address_elem.get_text().split('·')[0].strip() if address_elem and len(address_elem.get_text().split('·')) > 0 else None,
-                    'Telepon': phone,
-                    'Website': website,
-                    'Alamat': address,
-                    'Rating': ratingText,
-                    'Link Google Map': url,
-                    'Verified': 'Ya' if parent.find('span', class_='T6ofwe') else 'Tidak'
+                    'placeId': urlparse(url).path.split('/')[2],
+                    'address': address,
+                    'category': address_elem.get_text().split('·')[0].strip() if address_elem and len(address_elem.get_text().split('·')) > 0 else None,
+                    'phone': phone,
+                    'googleUrl': url,
+                    'bizWebsite': website,
+                    'storeName': storeName,
+                    'ratingText': ratingText,
+                    'stars': stars,
+                    'numberOfReviews': numberOfReviews
                 })
 
-                if len(businesses) >= max_data:
-                    break
-
-        # Write data to CSV file
-        with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
-            fieldnames = ['Nama', 'Kategori', 'Telepon', 'Website', 'Alamat', 'Rating', 'Verified', 'Link Google Map']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(businesses)
-
-        print("Data has been saved to", file_path)
+        return businesses
 
     except Exception as e:
         print("Error at searchGoogleMaps:", e)
@@ -123,7 +114,7 @@ async def autoScroll(page):
     }''')
 
 async def main():
-    max_data = 1000  # Change this number as desired
-    await searchGoogleMaps(max_data)
+    businesses = await searchGoogleMaps()
+    print(businesses)
 
 asyncio.get_event_loop().run_until_complete(main())
