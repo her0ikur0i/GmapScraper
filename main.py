@@ -7,14 +7,14 @@ from urllib.parse import urlparse
 # Import browser from pyppeteer
 from pyppeteer import launch
 
-async def searchGoogleMaps():
+async def searchGoogleMaps(max_data):
     try:
         # Define search query
-        query = "Nasi Goreng, Bandung"
+        query = "Developer Property, Bandung"
 
         # Define file path
-        file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nasgor_bdg.csv')
-
+        file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'DeveloperProperty_BDG.csv')
+        
         # Launch browser
         browser = await launch(headless=False, executablePath="C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe")
 
@@ -22,7 +22,7 @@ async def searchGoogleMaps():
         page = await browser.newPage()
 
         # Navigate to Google Maps search URL
-        await page.goto(f'https://www.google.com/maps/search/{"+".join(query.split())}', timeout=480000)
+        await page.goto(f'https://www.google.com/maps/search/{"+".join(query.split())}', timeout=120000)
 
         await page.waitForSelector('div[role="feed"]')
 
@@ -31,7 +31,6 @@ async def searchGoogleMaps():
 
         # Get HTML content
         html = await page.content()
-        await browser.close()
 
         # Parse HTML content with BeautifulSoup
         soup = BeautifulSoup(html, 'html.parser')
@@ -64,30 +63,26 @@ async def searchGoogleMaps():
                     stars = None
                     numberOfReviews = None
 
-                verified_elem = parent.find('span', class_='bSM')
-                verified = "Ya" if verified_elem else "Tidak"
-
                 businesses.append({
                     'Nama': storeName,
                     'Kategori': address_elem.get_text().split('·')[0].strip() if address_elem and len(address_elem.get_text().split('·')) > 0 else None,
                     'Telepon': phone,
                     'Website': website,
                     'Alamat': address,
-                    'Rating': stars,
-                    'Link Google Map': f'https://www.google.com{url}',
-                    'Verified': verified
+                    'Rating': ratingText,
+                    'Link Google Map': url,
+                    'Verified': 'Ya' if parent.find('span', class_='T6ofwe') else 'Tidak'
                 })
 
-        # Define fieldnames in desired order
-        fieldnames = ['Nama', 'Kategori', 'Telepon', 'Website', 'Alamat', 'Rating', 'Link Google Map', 'Verified']
+                if len(businesses) >= max_data:
+                    break
 
         # Write data to CSV file
         with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
+            fieldnames = ['Nama', 'Kategori', 'Telepon', 'Website', 'Alamat', 'Rating', 'Verified', 'Link Google Map']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
             writer.writeheader()
-            for business in businesses:
-                writer.writerow(business)
+            writer.writerows(businesses)
 
         print("Data has been saved to", file_path)
 
@@ -128,6 +123,7 @@ async def autoScroll(page):
     }''')
 
 async def main():
-    await searchGoogleMaps()
+    max_data = 1000  # Change this number as desired
+    await searchGoogleMaps(max_data)
 
 asyncio.get_event_loop().run_until_complete(main())
