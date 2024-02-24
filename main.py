@@ -10,10 +10,10 @@ from pyppeteer import launch
 async def searchGoogleMaps():
     try:
         # Define search query
-        query = "Bank, Jakarta"
+        query = "Nasi Goreng, Bandung"
 
         # Define file path
-        file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Bank_Jakarta.csv')
+        file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nasgor_bdg.csv')
 
         # Launch browser
         browser = await launch(headless=False, executablePath="C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe")
@@ -22,7 +22,7 @@ async def searchGoogleMaps():
         page = await browser.newPage()
 
         # Navigate to Google Maps search URL
-        await page.goto(f'https://www.google.com/maps/search/{"+".join(query.split())}', timeout=120000)
+        await page.goto(f'https://www.google.com/maps/search/{"+".join(query.split())}', timeout=480000)
 
         await page.waitForSelector('div[role="feed"]')
 
@@ -64,22 +64,25 @@ async def searchGoogleMaps():
                     stars = None
                     numberOfReviews = None
 
+                verified_elem = parent.find('span', class_='bSM')
+                verified = "Ya" if verified_elem else "Tidak"
+
                 businesses.append({
-                    'placeId': urlparse(url).path.split('/')[2],
-                    'address': address,
-                    'category': address_elem.get_text().split('·')[0].strip() if address_elem and len(address_elem.get_text().split('·')) > 0 else None,
-                    'phone': phone,
-                    'googleUrl': url,
-                    'bizWebsite': website,
-                    'storeName': storeName,
-                    'ratingText': ratingText,
-                    'stars': stars,
-                    'numberOfReviews': numberOfReviews
+                    'Nama': storeName,
+                    'Kategori': address_elem.get_text().split('·')[0].strip() if address_elem and len(address_elem.get_text().split('·')) > 0 else None,
+                    'Telepon': phone,
+                    'Website': website,
+                    'Alamat': address,
+                    'Rating': stars,
+                    'Link Google Map': f'https://www.google.com{url}',
+                    'Verified': verified
                 })
+
+        # Define fieldnames in desired order
+        fieldnames = ['Nama', 'Kategori', 'Telepon', 'Website', 'Alamat', 'Rating', 'Link Google Map', 'Verified']
 
         # Write data to CSV file
         with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
-            fieldnames = businesses[0].keys() if businesses else []
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
             writer.writeheader()
